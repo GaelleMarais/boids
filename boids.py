@@ -11,14 +11,17 @@ pygame.init()
 size = width, height = 1800, 900
 boid_width = 50
 boid_height = 37
+flower_width = 50
+flower_height = 50
 border = 35
 black = 0, 0, 0
 white = 255, 255, 255
 
 numBoids = 100
+numFlowers = 5
 boids = []
 walls = []
-
+flowers = []
 
 class Wall:
     def __init__(self, x1, x2, y1, y2):
@@ -36,6 +39,7 @@ class Boid:
         self.velocity_max = velocity_max
         self.velocityX = random.randint(1, 10) / 10.0
         self.velocityY = random.randint(1, 10) / 10.0
+        self.state = "moving"
 
     def is_on_wall(self, walls):
         for wall in walls:
@@ -153,15 +157,20 @@ walls.append(Wall(0, width, height - border, height))   # bottom
 walls.append(Wall(0, border, 0, height))                # left
 walls.append(Wall(width - border, width, 0, height))    # right
 
+# create and draw flower
+for i in range(numFlowers):
+    flower = Boid(random.randint(0, width), random.randint(0, height), 65, 65, 0)
+    if not flower.is_on_wall(walls):
+        flowers.append(flower)
 
 
 # create player
-player = Boid(100,100,80,59, 5)
+player = Boid(100,100,80,59, 6)
 player_image = pygame.image.load("queen.png")
 ballrect_player = player_image.get_rect()
 player_rect = pygame.Rect(ballrect_player)
 
-goal = Wall(100,300,100,300)
+goal = Wall(100,200,100,200)
 
 # create boids at random positions
 for i in range(numBoids):
@@ -177,40 +186,70 @@ while 1:
     if player.is_on_wall(walls):
         player.velocityX = -player.velocityX
         player.velocityY = -player.velocityY
+        while player.is_on_wall(walls):
+            player.move()
 
     for boid in boids:
-        closeBoids = []
-        for otherBoid in boids:
-            if otherBoid == boid: continue
-            distance = boid.distance(otherBoid)
-            if distance < 200:
-                closeBoids.append(otherBoid)
+        if boid.state == "moving":
+            closeBoids = []
+            for otherBoid in boids:
+                if otherBoid == boid: continue
+                distance = boid.distance(otherBoid)
+                if distance < 100:
+                    closeBoids.append(otherBoid)
 
-        boid.moveCloser(closeBoids)
-        boid.moveWith(closeBoids)
-        boid.moveAway(closeBoids, 30)
+            boid.moveCloser(closeBoids)
+            boid.moveWith(closeBoids)
+            boid.moveAway(closeBoids, 20)
 
-        # detect if in goal
-        # goals = []
-        # goals.append(goal)
-        # if boid.is_on_wall(goals):
+            # detect wall collision
+            if boid.is_on_wall(walls):
+                boid.velocityX = -boid.velocityX * 100;
+                boid.velocityY = -boid.velocityY * 100;
+                while boid.is_on_wall(walls):
+                    boid.move()
+
+            # run after the player
+            distance_to_player = boid.distance(player)
+            players = []
+            players.append(player);
+            if distance_to_player < 200:
+                boid.moveCloser(players)
+
+            # detect if captured
+            goals = [goal]
+            if boid.is_on_wall(goals):
+                boid.state = "captured"
+
+            # detect flowers
+            for flower in flowers:
+                if boid.distance(flower) < 10:
+                    boid.state = "eating"
+
+        if boid.state == "captured":
+            boid_goal = Boid(120 + random.randint(0, 20),150 + random.randint(0, 20),10,10,0)
+            boid_goals = [boid_goal]
+            boid.moveCloser(boid_goals)
+            boid.moveWith(boid_goals)
+            boid.moveAway(boid_goals, 5)
+
+        if boid.state == "eating":
+            for flower in flowers:
+                if boid.distance(flower) < 10:
+                    boid.velocityX= boid.velocityX/5;
+                    boid.velocityY= boid.velocityY/5;
+                    boid.moveCloser([flower])
+                    boid.moveAway([flower], 1)
+            if boid.distance(player) < 30:
+                for i in range (0,20):
+                    boid.moveCloser([player])
+                boid.state = "moving"
 
 
-
-        # detect wall collision
-        if boid.is_on_wall(walls):
-            boid.velocityX = -boid.velocityX * 100;
-            boid.velocityY = -boid.velocityY * 100;
-
-        # run after the player
-        distance_to_player = boid.distance(player)
-        players = []
-        players.append(player);
-        if distance_to_player < 200:
-            boid.moveCloser(players)
 
 
         boid.move()
+
 
     player.move()
 
@@ -224,12 +263,18 @@ while 1:
     goal_image = pygame.image.load('beehive.png')
     screen.blit(goal_image, (50,50))
 
+    #draw food
+    for flower in flowers:
+        flower_image = pygame.image.load('flower.png')
+        screen.blit(flower_image, (flower.x - + flower.width/4 ,flower.y - + flower.width/4))
+
     #draw the player
     player_rect.x = player.x
     player_rect.y = player.y
     screen.blit(player_image, player_rect)
 
 
+    # draw the boids
     for boid in boids:
         boidRect = pygame.Rect(ballrect)
         boidRect.x = boid.x
@@ -242,23 +287,16 @@ while 1:
         if event.type==KEYDOWN :
             if event.key == 122: #up
                 player.velocityX = 0
-                player.velocityY = -5
+                player.velocityY = -player.velocity_max
             if event.key == 113: #left
                 player.velocityY = 0
-                player.velocityX = -5
+                player.velocityX = -player.velocity_max
             if event.key == 100: #right
                 player.velocityY = 0
-                player.velocityX = 5
+                player.velocityX = player.velocity_max
             if event.key == 115: #down
                 player.velocityX = 0
-                player.velocityY = 5
+                player.velocityY = player.velocity_max
             if event.key == 27:
                 pygame.quit()
                 sys.exit()
-
-
-
-    # for wall in walls:
-    #     if player.x < wall.x2 and player.x > wall.x1 - 2*border and player.y < wall.y2 and player.y > wall.y1 - 2*border:
-    #         player.velocityX = -player.velocityX
-    #         player.velocityY = -player.velocityY
