@@ -165,7 +165,7 @@ for i in range(numFlowers):
 
 
 # create player
-player = Boid(100,100,80,59, 6)
+player = Boid(100,100,75,50, 6)
 player_image = pygame.image.load("queen.png")
 ballrect_player = player_image.get_rect()
 player_rect = pygame.Rect(ballrect_player)
@@ -244,8 +244,6 @@ while 1:
                 for i in range (0,20):
                     boid.moveCloser([player])
                 boid.state = "moving"
-
-
 
 
         boid.move()
