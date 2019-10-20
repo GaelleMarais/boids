@@ -304,7 +304,7 @@ while 1:
         font_congrats = pygame.font.SysFont(None, 160)
         font_congrats_outline = pygame.font.SysFont(None, 161)
 
-        readable_time_over = str(time_in_ms/100)+":"+str(time_in_ms - (time_in_ms/100))
+        readable_time_over = str(time_in_ms/100)+":"+str(time_in_ms % 100)
 
         timer_text_over = font_over.render(readable_time_over, True, yellow)
         timer_outline_over = font_outline_over.render(readable_time_over, True, black)
@@ -338,7 +338,7 @@ while 1:
         player.move()
 
         # update clock
-        readable_time = str(time_in_ms/100)+":"+str(time_in_ms - (time_in_ms/100))
+        readable_time = str(time_in_ms/100)+":"+str(time_in_ms % 100)
         timer_text = font.render(readable_time, True, yellow)
         timer_outline = font_outline.render(readable_time, True, black)
         text_rect = timer_text.get_rect()

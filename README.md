@@ -2,5 +2,5 @@
 
 Launch the game with :
 ```
-$ python boid.py
+$ python boids.py
 ```
