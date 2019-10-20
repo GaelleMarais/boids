@@ -5,17 +5,17 @@ import pygame
 from pygame import *
 import sys, random, math
 
-
 pygame.init()
 
-size = width, height = 1800, 900
+width, height = 1800, 900
 boid_width = 50
 boid_height = 37
 flower_width = 50
 flower_height = 50
 border = 35
-black = 0, 0, 0
+black = 30, 30, 30
 white = 255, 255, 255
+yellow = 255,190, 0
 
 numBoids = 100
 numFlowers = 5
@@ -133,7 +133,7 @@ class Boid:
         self.x += self.velocityX
         self.y += self.velocityY
 
-screen = pygame.display.set_mode(size)
+screen = pygame.display.set_mode((width, height))
 
 # ball = pygame.image.load("ball.png")
 ball = pygame.image.load("bee.png")
@@ -159,7 +159,7 @@ walls.append(Wall(width - border, width, 0, height))    # right
 
 # create and draw flower
 for i in range(numFlowers):
-    flower = Boid(random.randint(0, width), random.randint(0, height), 65, 65, 0)
+    flower = Boid(random.randint(100, width - 100), random.randint(0, height), 65, 65, 0)
     if not flower.is_on_wall(walls):
         flowers.append(flower)
 
@@ -173,21 +173,33 @@ player_rect = pygame.Rect(ballrect_player)
 goal = Wall(100,200,100,200)
 
 # create boids at random positions
+nb_total_boids = 0
 for i in range(numBoids):
     boid = Boid(random.randint(0, width), random.randint(0, height), 50, 37, 4)
     if not boid.is_on_wall(walls):
         boids.append(boid)
+        nb_total_boids += 1
+
+# create timer
+
+clock = pygame.time.Clock()
+time_in_ms = 0
+font = pygame.font.SysFont(None, 80)
+font_outline = pygame.font.SysFont(None, 82)
+
+game_over = False
+nb_captured_boids = 0
+
+
 
 while 1:
     for event in pygame.event.get():
         if event.type == pygame.QUIT: sys.exit()
 
-    # wall collision for the player
-    if player.is_on_wall(walls):
-        player.velocityX = -player.velocityX
-        player.velocityY = -player.velocityY
-        while player.is_on_wall(walls):
-            player.move()
+    screen.fill(white)
+
+
+    
 
     for boid in boids:
         if boid.state == "moving":
@@ -204,15 +216,15 @@ while 1:
 
             # detect wall collision
             if boid.is_on_wall(walls):
-                boid.velocityX = -boid.velocityX * 100;
-                boid.velocityY = -boid.velocityY * 100;
+                boid.velocityX = -boid.velocityX * 100
+                boid.velocityY = -boid.velocityY * 100
                 while boid.is_on_wall(walls):
                     boid.move()
 
             # run after the player
             distance_to_player = boid.distance(player)
             players = []
-            players.append(player);
+            players.append(player)
             if distance_to_player < 200:
                 boid.moveCloser(players)
 
@@ -220,6 +232,7 @@ while 1:
             goals = [goal]
             if boid.is_on_wall(goals):
                 boid.state = "captured"
+                nb_captured_boids += 1
 
             # detect flowers
             for flower in flowers:
@@ -232,6 +245,7 @@ while 1:
             boid.moveCloser(boid_goals)
             boid.moveWith(boid_goals)
             boid.moveAway(boid_goals, 5)
+
 
         if boid.state == "eating":
             for flower in flowers:
@@ -248,10 +262,12 @@ while 1:
 
         boid.move()
 
+        # check if game over
+        if nb_captured_boids >= nb_total_boids:
+            game_over = True
 
-    player.move()
 
-    screen.fill(white)
+
 
     # draw walls
     for wall in walls:
@@ -278,9 +294,70 @@ while 1:
         boidRect.x = boid.x
         boidRect.y = boid.y
         screen.blit(ball, boidRect)
-    pygame.display.flip()
-    pygame.time.delay(20)
 
+
+    if game_over:
+
+        # display congrats message + time
+        font_over = pygame.font.SysFont(None, 500)
+        font_outline_over = pygame.font.SysFont(None, 502)
+        font_congrats = pygame.font.SysFont(None, 160)
+        font_congrats_outline = pygame.font.SysFont(None, 161)
+
+        readable_time_over = str(time_in_ms/100)+":"+str(time_in_ms - (time_in_ms/100))
+
+        timer_text_over = font_over.render(readable_time_over, True, yellow)
+        timer_outline_over = font_outline_over.render(readable_time_over, True, black)
+        congrats_text = font_congrats.render("Impressionant !", True, yellow)
+        congrats_outline = font_congrats_outline.render("Impressionant !", True, black)
+
+        timer_text_rect_over = timer_text_over.get_rect()
+        timer_outline_rect_over = timer_outline_over.get_rect()
+        congrats_text_rect = congrats_text.get_rect()
+        congrats_outline_rect = congrats_outline.get_rect()
+
+        timer_text_rect_over.center = width/2, height/2
+        timer_outline_rect_over.center = width/2, height/2
+        congrats_text_rect.center = width/2, height/4
+        congrats_outline_rect.center = width/2, height/4
+
+        screen.blit(timer_outline_over, timer_outline_rect_over)
+        screen.blit(timer_text_over, timer_text_rect_over)
+        screen.blit(congrats_outline, congrats_outline_rect)
+        screen.blit(congrats_text, congrats_text_rect)
+
+
+    else:
+        # wall collision for the player
+        if player.is_on_wall(walls):
+            player.velocityX = -player.velocityX
+            player.velocityY = -player.velocityY
+            while player.is_on_wall(walls):
+                player.move()
+
+        player.move()
+
+        # update clock
+        readable_time = str(time_in_ms/100)+":"+str(time_in_ms - (time_in_ms/100))
+        timer_text = font.render(readable_time, True, yellow)
+        timer_outline = font_outline.render(readable_time, True, black)
+        text_rect = timer_text.get_rect()
+        text_rect.center = width - border - 80, border + 30
+        outline_rect = timer_outline.get_rect()
+        outline_rect.center = width - border - 80, border + 30
+        screen.blit(timer_outline,text_rect)
+        screen.blit(timer_text,text_rect)
+        milli = clock.tick()
+        time_in_ms += milli/10
+
+
+
+    pygame.display.flip()
+    pygame.time.delay(15)
+ 
+
+
+    # move the player
     for event in pygame.event.get():
         if event.type==KEYDOWN :
             if event.key == 122: #up
@@ -298,3 +375,4 @@ while 1:
             if event.key == 27:
                 pygame.quit()
                 sys.exit()
+
